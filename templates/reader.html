@@ -126,7 +126,7 @@
         // Pass the spine data from python to JS
         const spineMap = {
             {% for ch in book.spine %}
-            "{{ ch.href }}": {{ ch.order }},
+            {{ ch.href | tojson }}: {{ ch.order }},
             {% endfor %}
         };
 
@@ -140,7 +140,8 @@
             const idx = spineMap[cleanFile];
 
             if (idx !== undefined) {
-                let url = "/read/{{ book_id }}/" + idx;
+                const bookId = {{ book_id | tojson }};
+                let url = "/read/" + encodeURIComponent(bookId) + "/" + idx;
                 // If there was an anchor, we could try to scroll to it,
                 // but simple page loads often lose anchor position without extra JS.
                 // Let's just go to the page.
