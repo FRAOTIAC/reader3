@@ -17,9 +17,17 @@
         ul.toc-list { list-style: none; padding-left: 0; margin: 0; }
         ul.toc-list ul { padding-left: 20px; } /* Indent children */
         li.toc-item { margin-bottom: 8px; }
-        a.toc-link { text-decoration: none; color: #495057; font-size: 0.95em; display: block; padding: 4px 0; line-height: 1.4; }
+        
+        .toc-item-container { display: flex; justify-content: space-between; align-items: center; }
+        a.toc-link { flex-grow: 1; text-decoration: none; color: #495057; font-size: 0.95em; display: block; padding: 4px 0; line-height: 1.4; }
         a.toc-link:hover { color: #000; text-decoration: underline; }
         a.toc-link.active { color: #d63384; font-weight: bold; }
+
+        .copy-btn {
+            background: none; border: none; cursor: pointer; color: #aaa; padding: 0 5px; font-size: 0.9em;
+            opacity: 0.5; transition: opacity 0.2s;
+        }
+        .copy-btn:hover { opacity: 1; color: #3498db; }
 
         /* Main Content */
         #main { flex-grow: 1; overflow-y: auto; position: relative; scroll-behavior: smooth; }
@@ -50,38 +58,15 @@
             <ul class="toc-list">
             {% for item in items %}
                 <li class="toc-item">
-                    <!--
-                        Matching Logic:
-                        If the TOC item filename matches the current chapter filename, mark active.
-                        Ideally we match spine indices, but Reader 3 TOC maps to filenames.
-                        We use a simple hash matching logic here.
-                    -->
-                    {% set is_active = current_chapter.href == item.file_href %}
-
-                    <!--
-                       We need to find which linear chapter index (0, 1, 2) corresponds
-                       to this TOC entry file.
-                       Since that's hard to calculate in Jinja, we just link to the
-                       file anchor. BUT, to make our linear navigation work, we
-                       rely on the fact that the user is currently reading 'chapter_index'.
-
-                       Ideally, clicking a TOC link should find the 'index' of that file.
-                       For simplicity in this version: We link to the 'href' (filename)
-                       and let JavaScript or Backend handle it?
-
-                       Actually, let's just link to the file. The browser interprets #anchors.
-                       However, our router uses /read/book/INDEX.
-
-                       SIMPLE FIX: We won't link the TOC to the route index in this simple version
-                       unless we build a map. We will visually show structure,
-                       but rely on "Previous/Next" for linear reading.
-
-                       BETTER FIX: Use JavaScript to match filenames.
-                    -->
-                    <a href="#" onclick="findAndGo('{{ item.file_href }}')"
-                       class="toc-link {% if is_active %}active{% endif %}">
-                        {{ item.title }}
-                    </a>
+                    <div class="toc-item-container">
+                        {% set is_active = current_chapter.href == item.href %}
+                        
+                        <a href="#" onclick="findAndGo('{{ item.href }}')"
+                           class="toc-link {% if is_active %}active{% endif %}">
+                            {{ item.title }}
+                        </a>
+                        <button class="copy-btn" onclick="copyChapterContent('{{ item.href }}', event)" title="Copy Content">📋</button>
+                    </div>
 
                     {% if item.children %}
                         {{ render_toc(item.children) }}
@@ -108,9 +93,12 @@
                     <span class="nav-btn disabled">← Previous</span>
                 {% endif %}
 
-                <span style="color: #999; padding: 10px;">
-                    Section {{ chapter_index + 1 }} of {{ book.spine|length }}
-                </span>
+                <div style="text-align: center;">
+                    <span style="color: #999; display: block; margin-bottom: 5px;">
+                        Section {{ chapter_index + 1 }} of {{ book.spine|length }}
+                    </span>
+                    <button onclick="selectChapterContent()" class="nav-btn" style="font-size: 0.8em; padding: 5px 10px;">Select Chapter</button>
+                </div>
 
                 {% if next_idx is not none %}
                     <a href="/read/{{ book_id }}/{{ next_idx }}" class="nav-btn">Next →</a>
@@ -131,23 +119,170 @@
         };
 
         function findAndGo(filename) {
-            // The TOC usually has specific filenames e.g. "text/part001.html"
-            // Sometimes it has anchors "text/part001.html#header"
-            // We strip the anchor to find the page index
-            const cleanFile = filename.split('#')[0];
-            const anchor = filename.split('#')[1];
+            // filename might be "part01.html" or "part01.html#anchor"
+            
+            // 1. Try exact match
+            let idx = spineMap[filename];
 
-            const idx = spineMap[cleanFile];
+            // 2. If not found, and filename has NO anchor, 
+            // try to find the first entry in spineMap that starts with "filename#"
+            // (This handles the case where "Chapter 1" links to "file.html", 
+            //  but we only split it into "file.html#h1", "file.html#h2"...)
+            if (idx === undefined && filename.indexOf('#') === -1) {
+                // Find first key starting with filename + "#"
+                const prefix = filename + "#";
+                for (const key in spineMap) {
+                    if (key.startsWith(prefix)) {
+                        idx = spineMap[key];
+                        break;
+                    }
+                }
+            }
+            
+            // 3. If still not found, try stripping anchor (fallback to file start)
+            // (This handles case where "Chapter 1" links to "file.html#pos", 
+            //  but we only have "file.html" as the entry point)
+            if (idx === undefined && filename.indexOf('#') !== -1) {
+                 const cleanFile = filename.split('#')[0];
+                 idx = spineMap[cleanFile];
+            }
 
             if (idx !== undefined) {
                 const bookId = {{ book_id | tojson }};
                 let url = "/read/" + encodeURIComponent(bookId) + "/" + idx;
-                // If there was an anchor, we could try to scroll to it,
-                // but simple page loads often lose anchor position without extra JS.
-                // Let's just go to the page.
                 window.location.href = url;
             } else {
                 console.log("Could not find index for", filename);
+            }
+        }
+
+        function selectChapterContent() {
+            const content = document.querySelector('.book-content');
+            if (!content) return;
+
+            const selection = window.getSelection();
+            const range = document.createRange();
+            range.selectNodeContents(content);
+            selection.removeAllRanges();
+            selection.addRange(range);
+        }
+
+        // Restore sidebar scroll position
+        window.addEventListener('DOMContentLoaded', () => {
+            const sidebar = document.getElementById('sidebar');
+            const savedScroll = sessionStorage.getItem('sidebarScroll');
+            
+            // 1. Try to restore saved position
+            if (savedScroll) {
+                sidebar.scrollTop = savedScroll;
+            }
+
+            // 2. Alternatively (or if restoration fails/is not set), ensure active link is visible
+            // This is usually better UX than just restoring pixel position if the window resized
+            const activeLink = document.querySelector('.toc-link.active');
+            if (activeLink) {
+                // Check if it's already visible? 
+                // Simple approach: scrollIntoView with 'nearest' or 'center'
+                // But if we just restored scrollTop, we might not want to jump.
+                // Let's prioritize scrollIntoView if NO saved scroll, or if we want to ensure visibility.
+                
+                // Let's try: restore scroll first. Then check if active is visible.
+                // Or simply: Always scroll active into view lightly.
+                activeLink.scrollIntoView({ behavior: 'auto', block: 'nearest' });
+            }
+
+            // Save scroll position on scroll
+            sidebar.addEventListener('scroll', () => {
+                sessionStorage.setItem('sidebarScroll', sidebar.scrollTop);
+            });
+        });
+
+        // Intercept Ctrl+A / Cmd+A to select only the chapter content
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+                // Check if the focus is not in an input/textarea (though we don't have any here usually)
+                const target = e.target;
+                if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+                    return;
+                }
+                
+                e.preventDefault();
+                selectChapterContent();
+            }
+        });
+
+        async function copyChapterContent(href, event) {
+            // Prevent link navigation if inside an anchor (though we moved it out)
+            if (event) event.stopPropagation();
+
+            // 1. Find index
+            let idx = spineMap[href];
+            
+            // Same fallback logic as findAndGo
+            if (idx === undefined && href.indexOf('#') === -1) {
+                const prefix = href + "#";
+                for (const key in spineMap) {
+                    if (key.startsWith(prefix)) {
+                        idx = spineMap[key];
+                        break;
+                    }
+                }
+            }
+            if (idx === undefined && href.indexOf('#') !== -1) {
+                 const cleanFile = href.split('#')[0];
+                 idx = spineMap[cleanFile];
+            }
+
+            if (idx === undefined) {
+                alert("Could not find chapter content.");
+                return;
+            }
+
+            // 2. Fetch content
+            const bookId = {{ book_id | tojson }};
+            // Use recursive endpoint with href
+            const url = `/api/content/recursive/${encodeURIComponent(bookId)}?href=${encodeURIComponent(href)}`;
+            
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error("Network response was not ok");
+                const data = await response.json();
+                
+                // 3. Extract text (using DOMParser to handle HTML entities and formatting)
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(data.content, 'text/html');
+                const text = doc.body.innerText; // Preserves newlines unlike textContent
+
+                // 4. Copy to clipboard
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(text);
+                } else {
+                    // Fallback for non-secure contexts (LAN http)
+                    const textArea = document.createElement("textarea");
+                    textArea.value = text;
+                    textArea.style.position = "fixed";
+                    textArea.style.left = "-9999px";
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    try {
+                        document.execCommand('copy');
+                    } catch (err) {
+                        console.error('Fallback copy failed', err);
+                        throw new Error("Copy failed");
+                    }
+                    document.body.removeChild(textArea);
+                }
+                
+                // 5. Visual Feedback
+                const btn = event.target;
+                const originalText = btn.innerText;
+                btn.innerText = "✅";
+                setTimeout(() => btn.innerText = originalText, 1500);
+                
+            } catch (err) {
+                console.error("Failed to copy: ", err);
+                alert("Failed to copy content.");
             }
         }
     </script>
