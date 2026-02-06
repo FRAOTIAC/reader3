@@ -1,0 +1,55 @@
+//@version=6
+indicator("5D EMA & 9D EMA", shorttitle="5D EMA / 9D EMA", overlay=true)
+
+// === INPUTS ===
+showDistanceLabel = input.bool(false, "Show Distance from 5D EMA Label")
+showFill = input.bool(false, "Show Price vs 5EMA Fill")
+labelPosition = input.string("bottom_right", "Label Position", options=["top_right", "top_left", "bottom_right", "bottom_left"])
+
+// === CALCULATE DYNAMIC PERIOD (通用函数) ===
+calc_dynamic_period(days) =>
+    if timeframe.isdaily
+        days
+    else if timeframe.isweekly
+        // 周线图简单近似：5天约为1周，9天约为2周
+        math.round(days / 5)
+    else
+        // 假设每天交易时间为 390 分钟 (6.5小时)
+        minutes_in_days = days * 390
+        timeframe_in_minutes = timeframe.multiplier
+        timeframe_in_minutes != 0 ? minutes_in_days / timeframe_in_minutes : 1
+
+// 计算两个周期
+period_5 = calc_dynamic_period(5)
+period_9 = calc_dynamic_period(9)
+
+// === EMA CALCULATION ===
+ema5 = ta.ema(close, period_5) // 5-Day EMA
+ema9 = ta.ema(close, period_9) // 9-Day EMA
+
+// === PLOTTING ===
+// 5-Day EMA (橙色 #FF9800, 不透明度 40%, 虚线)
+ema5_plot = plot(ema5, color=color.new(#FF9800, 60), linewidth=1, title="5-Day EMA", linestyle=plot.linestyle_dashed)
+
+// 9-Day EMA (青色 #00BCD4, 不透明度 40%, 点线)
+ema9_plot = plot(ema9, color=color.new(#00BCD4, 60), linewidth=1, title="9-Day EMA", linestyle=plot.linestyle_dotted)
+
+// Price (用于填充，本身不显示颜色)
+price_plot = plot(close, color=color.new(color.white, 100), title="Price", display=display.none)
+
+// 填充逻辑 (默认关闭，基于 5-Day EMA)
+fillColor = close > ema5 ? color.new(color.green, 80) : color.new(color.red, 80)
+fill(price_plot, ema5_plot, color=showFill ? fillColor : na, title="Price vs 5EMA Fill")
+
+// === DISTANCE LABEL (基于 5-Day EMA) ===
+distance = (close - ema5) / ema5 * 100
+distanceText = "5 EMA  " + str.tostring(distance, format.percent)
+
+// === LABEL COLOR ===
+distanceColor = distance >= 0 ? color.green : color.red
+
+// === DRAW TABLE ===
+var table infoTable = table.new(position=labelPosition, columns=1, rows=1, bgcolor=color.black, border_width=1)
+
+if barstate.islast and showDistanceLabel
+    table.cell(infoTable, 0, 0, distanceText, text_color=distanceColor, text_size=size.small, text_halign=text.align_center)

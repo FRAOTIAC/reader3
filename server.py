@@ -17,8 +17,8 @@ app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
 # Where are the book folders located?
-BOOKS_DIR = "."
-HISTORY_FILE = "history.json"
+BOOKS_DIR = os.environ.get("BOOKS_DIR", ".")
+HISTORY_FILE = os.environ.get("HISTORY_FILE", "history.json")
 
 def get_history() -> dict:
     if os.path.exists(HISTORY_FILE):
@@ -54,10 +54,13 @@ def load_book_cached(folder_name: str) -> Optional[Book]:
         return None
 
 @app.get("/", response_class=HTMLResponse)
-async def library_view(request: Request, sort: str = "upload"):
+async def library_view(request: Request, sort: Optional[str] = None):
     """Lists all available processed books."""
     books = []
     history = get_history()
+    
+    # Determine sorting preference: Query param -> Cookie -> Default
+    current_sort = sort or request.cookies.get("sort_pref") or "upload"
 
     # Scan directory for folders ending in '_data' that have a book.pkl
     if os.path.exists(BOOKS_DIR):
@@ -91,16 +94,20 @@ async def library_view(request: Request, sort: str = "upload"):
                     })
 
     # Sorting
-    if sort == "opened":
+    if current_sort == "opened":
         books.sort(key=lambda x: x["last_opened"], reverse=True)
     else: # default to upload
         books.sort(key=lambda x: x["processed_at"], reverse=True)
 
-    return templates.TemplateResponse("library.html", {
+    response = templates.TemplateResponse("library.html", {
         "request": request, 
         "books": books,
-        "current_sort": sort
+        "current_sort": current_sort
     })
+    
+    # Save preference in cookie for 30 days
+    response.set_cookie(key="sort_pref", value=current_sort, max_age=30*24*60*60)
+    return response
 
 @app.post("/upload")
 async def upload_books(files: List[UploadFile] = File(...)):

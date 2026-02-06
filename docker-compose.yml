@@ -1,0 +1,13 @@
+services:
+  reader3:
+    build: .
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-lucas}/reader3:latest
+    ports:
+      - "8123:8123"
+    volumes:
+      - ./data:/app/data
+      - ./uploads:/app/uploads
+    environment:
+      - BOOKS_DIR=/app/data
+      - HISTORY_FILE=/app/data/history.json
+    restart: unless-stopped
