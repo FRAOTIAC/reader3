@@ -14,7 +14,8 @@ from fastapi.templating import Jinja2Templates
 from reader3 import Book, BookMetadata, ChapterContent, TOCEntry, process_epub, save_to_pickle
 
 app = FastAPI()
-templates = Jinja2Templates(directory="templates")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+templates = Jinja2Templates(directory=os.path.join(BASE_DIR, "templates"))
 
 # Where are the book folders located?
 BOOKS_DIR = os.environ.get("BOOKS_DIR", ".")

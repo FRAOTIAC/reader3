@@ -11,4 +11,5 @@ services:
       - BOOKS_DIR=/app/data
       - HISTORY_FILE=/app/data/history.json
       - UPLOAD_DIR=/app/uploads
+      - PYTHONPATH=/app
     restart: unless-stopped

@@ -26,6 +26,7 @@ EXPOSE 8123
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
 
 # Command to run the application
-CMD ["uv", "run", "python", "server.py"]
+CMD ["uv", "run", "python", "app/server.py"]
