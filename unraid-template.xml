@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>reader3</Name>
+  <Repository>ghcr.io/fraotiac/reader3:latest</Repository>
+  <Registry>https://ghcr.io</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/FRAOTIAC/reader3/issues</Support>
+  <Project>https://github.com/FRAOTIAC/reader3</Project>
+  <Overview>A simple, modern EPUB reader web app with logical chapter splitting, cover support, and reading history. Optimized for a clean reading experience.</Overview>
+  <Category>MediaApp:Books MediaApp:Other</Category>
+  <WebUI>http://[IP]:[PORT:8123]/</WebUI>
+  <TemplateURL/>
+  <Icon>https://raw.githubusercontent.com/FRAOTIAC/reader3/master/reader3.png</Icon>
+  <ExtraParams/>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires/>
+  <Config Name="Web UI Port" Target="8123" Default="8123" Mode="tcp" Description="The port the web interface is accessible on." Type="Port" Display="always" Required="true" Mask="false">8123</Config>
+  <Config Name="Books Data" Target="/app/data" Default="/mnt/user/appdata/reader3/data" Mode="rw" Description="Directory where processed book data and history are stored." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/reader3/data</Config>
+  <Config Name="Uploads" Target="/app/uploads" Default="/mnt/user/appdata/reader3/uploads" Mode="rw" Description="Directory where uploaded EPUB files are temporarily stored." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/reader3/uploads</Config>
+  <Config Name="BOOKS_DIR" Target="BOOKS_DIR" Default="/app/data" Description="Internal path for book data." Type="Variable" Display="advanced" Required="true" Mask="false">/app/data</Config>
+  <Config Name="HISTORY_FILE" Target="HISTORY_FILE" Default="/app/data/history.json" Description="Internal path for history file." Type="Variable" Display="advanced" Required="true" Mask="false">/app/data/history.json</Config>
+  <Config Name="UPLOAD_DIR" Target="UPLOAD_DIR" Default="/app/uploads" Description="Internal path for uploads." Type="Variable" Display="advanced" Required="true" Mask="false">/app/uploads</Config>
+</Container>
