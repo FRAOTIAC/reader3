@@ -19,6 +19,12 @@ templates = Jinja2Templates(directory="templates")
 # Where are the book folders located?
 BOOKS_DIR = os.environ.get("BOOKS_DIR", ".")
 HISTORY_FILE = os.environ.get("HISTORY_FILE", "history.json")
+UPLOAD_DIR = os.environ.get("UPLOAD_DIR", "uploads")
+
+# Ensure directories exist
+for d in [BOOKS_DIR, UPLOAD_DIR, os.path.dirname(HISTORY_FILE)]:
+    if d and not os.path.exists(d):
+        os.makedirs(d, exist_ok=True)
 
 def get_history() -> dict:
     if os.path.exists(HISTORY_FILE):
@@ -65,7 +71,8 @@ async def library_view(request: Request, sort: Optional[str] = None):
     # Scan directory for folders ending in '_data' that have a book.pkl
     if os.path.exists(BOOKS_DIR):
         for item in os.listdir(BOOKS_DIR):
-            if item.endswith("_data") and os.path.isdir(item):
+            full_path = os.path.join(BOOKS_DIR, item)
+            if item.endswith("_data") and os.path.isdir(full_path):
                 # Try to load it to get the title
                 book = load_book_cached(item)
                 if book:
@@ -114,17 +121,13 @@ async def upload_books(files: List[UploadFile] = File(...)):
     """
     Uploads multiple EPUB files, converts them, and adds them to the library.
     """
-    upload_dir = "uploads"
-    if not os.path.exists(upload_dir):
-        os.makedirs(upload_dir)
-
     for file in files:
         if not file.filename.lower().endswith(".epub"):
             print(f"Skipping non-epub file: {file.filename}")
             continue
 
         # 1. Save uploaded file
-        file_path = os.path.join(upload_dir, file.filename)
+        file_path = os.path.join(UPLOAD_DIR, file.filename)
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 

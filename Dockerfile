@@ -15,6 +15,9 @@ COPY pyproject.toml uv.lock ./
 # Install dependencies
 RUN uv sync --frozen --no-cache
 
+# Create data and uploads directories
+RUN mkdir -p /app/data /app/uploads
+
 # Copy source code
 COPY . .
 

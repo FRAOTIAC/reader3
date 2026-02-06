@@ -10,4 +10,5 @@ services:
     environment:
       - BOOKS_DIR=/app/data
       - HISTORY_FILE=/app/data/history.json
+      - UPLOAD_DIR=/app/uploads
     restart: unless-stopped
