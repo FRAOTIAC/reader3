@@ -12,3 +12,10 @@ wheels/
 # Custom
 *_data/
 *.epub
+server.log
+history.json
+uploads/
+123
+5/
+test_split.py
+.cursor/
