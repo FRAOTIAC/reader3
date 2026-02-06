@@ -2,25 +2,48 @@
 
 ![reader3](reader3.png)
 
-A lightweight, self-hosted EPUB reader that lets you read through EPUB books one chapter at a time. This makes it very easy to copy paste the contents of a chapter to an LLM, to read along. Basically - get epub books (e.g. [Project Gutenberg](https://www.gutenberg.org/) has many), open them up in this reader, copy paste text around to your favorite LLM, and read together and along.
+A lightweight, self-hosted EPUB reader that lets you read through EPUB books one chapter at a time. This makes it very easy to copy paste the contents of a chapter to an LLM, to read along. Optimized for a clean reading experience with logical chapter splitting, cover support, and reading history.
 
-This project was 90% vibe coded just to illustrate how one can very easily [read books together with LLMs](https://x.com/karpathy/status/1990577951671509438). I'm not going to support it in any way, it's provided here as is for other people's inspiration and I don't intend to improve it. Code is ephemeral now and libraries are over, ask your LLM to change it in whatever way you like.
+## Features
+- **Logical Chapter Splitting**: Automatically splits large EPUB files into readable segments based on TOC.
+- **Web Upload**: Upload multiple EPUB files directly through the browser.
+- **Reading History**: Keeps track of your reading progress and sorting.
+- **Docker Support**: Easy deployment using Docker and Docker Compose.
+- **Unraid Ready**: Includes a template for easy Unraid deployment.
+- **CI/CD**: Automatic Docker image building and publishing via GitHub Actions.
 
 ## Usage
 
-The project uses [uv](https://docs.astral.sh/uv/). So for example, download [Dracula EPUB3](https://www.gutenberg.org/ebooks/345) to this directory as `dracula.epub`, then:
+### Using Docker (Recommended)
+The easiest way to run reader3 is using Docker Compose:
 
 ```bash
-uv run reader3.py dracula.epub
+docker-compose up -d
 ```
 
-This creates the directory `dracula_data`, which registers the book to your local library. We can then run the server:
+Visit [localhost:8123](http://localhost:8123/) to access your library.
 
+### Local Development
+The project uses [uv](https://docs.astral.sh/uv/).
+
+1. **Run the server**:
+   ```bash
+   uv run python app/server.py
+   ```
+2. **Upload books**: Use the web interface to upload your EPUB files. They will be automatically processed and added to your library.
+
+Alternatively, you can manually process a book via CLI:
 ```bash
-uv run server.py
+uv run python app/reader3.py your_book.epub
 ```
 
-And visit [localhost:8123](http://localhost:8123/) to see your current Library. You can easily add more books, or delete them from your library by deleting the folder. It's not supposed to be complicated or complex.
+## Deployment
+
+### Docker Compose
+Modify the `volumes` in `docker-compose.yml` to point to your desired data and upload directories.
+
+### Unraid
+Use the provided `unraid-template.xml` to add a new container in your Unraid dashboard.
 
 ## License
 
